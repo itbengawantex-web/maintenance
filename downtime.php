@@ -7,55 +7,84 @@ include('includes/sidebar.php');
 
 
 
-// Konfigurasi pagination
-$limit = 40; // Jumlah data per halaman
-$halaman = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
-$offset = ($halaman - 1) * $limit;
+$filterParams = http_build_query([
+    'kode_mesin'    => $_GET['kode_mesin'] ?? '',
+    'blok'          => $_GET['blok'] ?? '',
+    'nik_mekanik'   => $_GET['nik_mekanik'] ?? '',
+    'tanggal_mulai' => $_GET['tanggal_mulai'] ?? '',
+    'tanggal_akhir' => $_GET['tanggal_akhir'] ?? ''
+]);
 
+/* =======================
+   PAGINATION
+======================= */
+$perPage = 40;
+$halaman = isset($_GET['halaman']) ? max((int)$_GET['halaman'], 1) : 1;
+$offset  = ($halaman - 1) * $perPage;
+
+/* =======================
+   FILTER INPUT (AMAN)
+======================= */
+$kode_mesin    = mysqli_real_escape_string($con, $_GET['kode_mesin'] ?? '');
+$blok          = mysqli_real_escape_string($con, $_GET['blok'] ?? '');
+$nik_mekanik   = mysqli_real_escape_string($con, $_GET['nik_mekanik'] ?? '');
+$tanggal_mulai = mysqli_real_escape_string($con, $_GET['tanggal_mulai'] ?? '');
+$tanggal_akhir = mysqli_real_escape_string($con, $_GET['tanggal_akhir'] ?? '');
+
+/* =======================
+   DEFAULT TANGGAL
+======================= */
+if ($tanggal_mulai === '' && $tanggal_akhir === '') {
+    $tanggal_mulai = date('Y-m-01');
+    $tanggal_akhir = date('Y-m-t');
+}
+
+/* =======================
+   BUILD WHERE (DINAMIS)
+======================= */
 $where = [];
+$where[] = "tanggal BETWEEN '$tanggal_mulai' AND '$tanggal_akhir'";
 
-if (!empty($_GET['kode_mesin'])) {
-    $kode_mesin = mysqli_real_escape_string($con, $_GET['kode_mesin']);
+if ($kode_mesin !== '') {
     $where[] = "kode_mesin LIKE '%$kode_mesin%'";
 }
 
-if (!empty($_GET['tanggal_mulai']) && !empty($_GET['tanggal_akhir'])) {
-    $tanggal_mulai = mysqli_real_escape_string($con, $_GET['tanggal_mulai']);
-    $tanggal_akhir = mysqli_real_escape_string($con, $_GET['tanggal_akhir']);
-    $where[] = "tanggal BETWEEN '$tanggal_mulai' AND '$tanggal_akhir'";
+if ($blok !== '') {
+    $where[] = "blok = '$blok'";
 }
 
-if (!empty($_GET['nik_mekanik'])) {
-    $nik_mekanik = mysqli_real_escape_string($con, $_GET['nik_mekanik']);
-    $where[] = "nik_mekanik = '$nik_mekanik'"; // sudah diperbaiki
+if ($nik_mekanik !== '') {
+    $where[] = "nik_mekanik = '$nik_mekanik'";
 }
 
-if (!empty($_GET['blok'])) {
-    $blok = mysqli_real_escape_string($con, $_GET['blok']);
-    $where[] = "kode_mesin IN (SELECT kode_mesin FROM data_mesin WHERE lokasi = '$blok')";
-}
+$whereSQL = 'WHERE ' . implode(' AND ', $where);
 
-$where_clause = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+/* =======================
+   TOTAL DATA
+======================= */
+$totalQuery = mysqli_query(
+    $con,
+    "SELECT COUNT(*) AS total FROM log_downtime $whereSQL"
+);
+$totalData = mysqli_fetch_assoc($totalQuery)['total'];
+$pages = ceil($totalData / $perPage);
 
-// Hitung total data
-$total_query = mysqli_query($con, "SELECT COUNT(*) as total FROM log_downtime $where_clause");
-if (!$total_query) {
-    die("Query Error (total): " . mysqli_error($con));
-}
-$total_data = mysqli_fetch_assoc($total_query)['total'];
-$pages = ceil($total_data / $limit);
+/* =======================
+   DATA TABEL
+======================= */
+$query = "
+    SELECT *
+    FROM log_downtime
+    $whereSQL
+    ORDER BY tanggal DESC
+    LIMIT $perPage OFFSET $offset
+";
 
-// Ambil data
-$query = "SELECT * 
-          FROM log_downtime
-          $where_clause 
-          ORDER BY tanggal DESC 
-          LIMIT $offset, $limit";
 $result = mysqli_query($con, $query);
-if (!$result) {
-    die("Query Error (data): " . mysqli_error($con));
-}
 
+if (!$result) {
+    die('Query Error: ' . mysqli_error($con));
+}
 ?>
 <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">
@@ -83,32 +112,50 @@ if (!$result) {
                 <div class="card">
                     <div class="card-header">
                     
-                    <form method="GET" class="d-flex gap-2 align-items-center mb-0">
-                      <a href="tambahlog.php" class="btn btn-primary mr-2">Tambah Log </a>
+                    <form method="GET" action="<?= htmlspecialchars($_SERVER['PHP_SELF']); ?>" 
+      class="d-flex gap-2 align-items-center mb-0">
 
-                      <input type="text" name="kode_mesin" class="form-control form-control-sm mr-2" placeholder="Kode Mesin" style="width: 150px;" value="<?= isset($_GET['kode_mesin']) ? $_GET['kode_mesin'] : '' ?>" />
+    <a href="tambahlog.php" class="btn btn-primary mr-2">Tambah Log</a>
 
-                      <select name="blok" class="form-control form-control-sm mr-2" style="width: 150px;">
-                          <option value="">-- Pilih Blok --</option>
-                          <option value="CL BLOK 1" <?= isset($_GET['blok']) && $_GET['blok'] == 'CL BLOK 1' ? 'selected' : '' ?>>CL BLOK 1</option>
-                          <option value="CL BLOK 2" <?= isset($_GET['blok']) && $_GET['blok'] == 'CL BLOK 2' ? 'selected' : '' ?>>CL BLOK 2</option>
-                          <option value="CL BLOK 3" <?= isset($_GET['blok']) && $_GET['blok'] == 'CL BLOK 3' ? 'selected' : '' ?>>CL BLOK 3</option>
-                          <option value="CL BLOK 4" <?= isset($_GET['blok']) && $_GET['blok'] == 'CL BLOK 4' ? 'selected' : '' ?>>CL BLOK 4</option>
-                          <option value="FINISHING" <?= isset($_GET['blok']) && $_GET['blok'] == 'FINISHING' ? 'selected' : '' ?>>FINISHING</option>
-                          <option value="EXTRUDER" <?= isset($_GET['blok']) && $_GET['blok'] == 'EXTRUDER' ? 'selected' : '' ?>>EXTRUDER</option>
-                      </select>
+    <input type="text" name="kode_mesin"
+           class="form-control form-control-sm mr-2"
+           placeholder="Kode Mesin"
+           style="width: 150px;"
+           value="<?= $_GET['kode_mesin'] ?? '' ?>">
 
-                      <!-- 🔽 Tambahan Filter NIK Mekanik -->
-                      <input type="text" name="nik_mekanik" class="form-control form-control-sm mr-2" placeholder="NIK Mekanik" style="width: 150px;" value="<?= isset($_GET['nik_mekanik']) ? $_GET['nik_mekanik'] : '' ?>" />
+    <select name="blok" class="form-control form-control-sm mr-2" style="width: 150px;">
+        <option value="">-- Pilih Blok --</option>
+        <?php
+        $blokList = ['CL BLOK 1','CL BLOK 2','CL BLOK 3','CL BLOK 4','FINISHING','EXTRUDER'];
+        foreach ($blokList as $b) {
+            $selected = (($_GET['blok'] ?? '') === $b) ? 'selected' : '';
+            echo "<option value='$b' $selected>$b</option>";
+        }
+        ?>
+    </select>
 
-                      <input type="date" name="tanggal_mulai" class="form-control form-control-sm mr-2" style="width: 140px;" value="<?= isset($_GET['tanggal_mulai']) ? $_GET['tanggal_mulai'] : '' ?>" />
+    <input type="text" name="nik_mekanik"
+           class="form-control form-control-sm mr-2"
+           placeholder="NIK Mekanik"
+           style="width: 150px;"
+           value="<?= $_GET['nik_mekanik'] ?? '' ?>">
 
-                      <input type="date" name="tanggal_akhir" class="form-control form-control-sm mr-2" style="width: 140px;" value="<?= isset($_GET['tanggal_akhir']) ? $_GET['tanggal_akhir'] : '' ?>" />
+    <input type="date" name="tanggal_mulai"
+           class="form-control form-control-sm mr-2"
+           style="width: 140px;"
+           value="<?= $_GET['tanggal_mulai'] ?? '' ?>">
 
-                      <input type="hidden" name="halaman" value="<?= $_GET['halaman'] ?? 1 ?>">
+    <input type="date" name="tanggal_akhir"
+           class="form-control form-control-sm mr-2"
+           style="width: 140px;"
+           value="<?= $_GET['tanggal_akhir'] ?? '' ?>">
 
-                      <button type="submit" class="btn btn-sm btn-primary">Tampilkan</button>
-                  </form>
+    <!-- 🔴 WAJIB: reset ke halaman 1 saat filter -->
+    <input type="hidden" name="halaman" value="1">
+
+    <button type="submit" class="btn btn-sm btn-primary">Tampilkan</button>
+</form>
+
 
                     </div>
                     
@@ -181,7 +228,12 @@ if ($row['status'] == 'Major') {
     </td>
 </tr>";
 $no++;
-
+$kode_mesin    = $_GET['kode_mesin'] ?? '';
+$blok          = $_GET['blok'] ?? '';
+$nik_mekanik   = $_GET['nik_mekanik'] ?? '';
+$tgl_mulai     = $_GET['tanggal_mulai'] ?? '';
+$tgl_akhir     = $_GET['tanggal_akhir'] ?? '';
+$halaman       = $_GET['halaman'] ?? 1;
         echo "
 <div class='modal fade' id='editModal{$row['id_log']}' tabindex='-1' aria-labelledby='editModalLabel{$row['id_log']}' aria-hidden='true'>
   <div class='modal-dialog modal-lg'>
@@ -192,8 +244,14 @@ $no++;
           <button type='button' class='btn-close' data-dismiss='modal' aria-label='Close'></button>
         </div>
         <div class='modal-body'>
-          <input type='hidden' name='id_log' value='{$row['id_log']}'>
-          <input type='hidden' name='halaman' value='" . ($_GET['halaman'] ?? 1) . "'>
+        <input type='hidden' name='id_log' value='{$row['id_log']}'>
+        <input type='hidden' name='halaman' value='{$halaman}'>
+        <input type='hidden' name='kode_mesin_filter' value='{$kode_mesin}'>
+        <input type='hidden' name='blok' value='{$blok}'>
+        <input type='hidden' name='nik_mekanik' value='{$nik_mekanik}'>
+        <input type='hidden' name='tanggal_mulai' value='{$tgl_mulai}'>
+        <input type='hidden' name='tanggal_akhir' value='{$tgl_akhir}'>
+          
           <div class='row'>
             <div class='col-md-6 mb-2'>
               <label>Tanggal</label>
@@ -254,8 +312,13 @@ $no++;
           </div>
           <form action='edit_status.php' method='POST'>
             <div class='modal-body'>
-              <input type='hidden' name='id_log' value='{$row['id_log']}'>
-              <input type='hidden' name='halaman' value='" . ($_GET['halaman'] ?? 1) . "'>
+          <input type='hidden' name='id_log' value='{$row['id_log']}'>
+          <input type='hidden' name='halaman' value='{$halaman}'>
+          <input type='hidden' name='kode_mesin' value='{$kode_mesin}'>
+          <input type='hidden' name='blok' value='{$blok}'>
+          <input type='hidden' name='nik_mekanik' value='{$nik_mekanik}'>
+          <input type='hidden' name='tanggal_mulai' value='{$tgl_mulai}'>
+          <input type='hidden' name='tanggal_akhir' value='{$tgl_akhir}'>
               <p>Ubah status downtime untuk mesin <strong>{$row['kode_mesin']}</strong> tanggal <strong>{$row['tanggal']}</strong>:</p>
               <select class='form-control' name='status'>
                 <option value='Major' " . ($row['status'] == 'Major' ? 'selected' : '') . ">Major</option>
@@ -279,56 +342,61 @@ $no++;
                     </tbody>
                   </table>
                         <!-- Navigasi pagination -->
-                            <div class="card-footer clearfix">
-                            <ul class="pagination pagination-sm m-0 float-right">
-                                <?php
-                                $limit = 5; // jumlah nomor halaman yang ditampilkan
-                                $start = max(1, $halaman - floor($limit / 2));
-                                $end = min($pages, $start + $limit - 1);
+                           <?php if ($pages > 1) { ?>
+<div class="card-footer clearfix">
+    <ul class="pagination pagination-sm m-0 float-right">
 
-                                // Adjust kalau posisi di awal/akhir
-                                if ($end - $start + 1 < $limit) {
-                                    $start = max(1, $end - $limit + 1);
-                                }
+        <!-- PREV -->
+        <?php if ($halaman > 1) { ?>
+            <li class="page-item">
+                <a class="page-link" href="?halaman=<?= $halaman - 1 ?>&<?= $filterParams ?>">
+                    &laquo;
+                </a>
+            </li>
+        <?php } else { ?>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+        <?php } ?>
 
-                                // Tombol Prev
-                                if ($halaman > 1) {
-                                    echo '<li class="page-item"><a class="page-link" href="?halaman=' . ($halaman - 1) . '">&laquo;</a></li>';
-                                } else {
-                                    echo '<li class="page-item disabled"><span class="page-link">&laquo;</span></li>';
-                                }
+        <!-- NOMOR HALAMAN -->
+        <?php
+        $limit = 5; // jumlah halaman yang ditampilkan
+        $start = max(1, $halaman - floor($limit / 2));
+        $end   = min($pages, $start + $limit - 1);
 
-                                // Tampilkan halaman pertama + ellipsis
-                                if ($start > 1) {
-                                    echo '<li class="page-item"><a class="page-link" href="?halaman=1">1</a></li>';
-                                    if ($start > 2) {
-                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
-                                    }
-                                }
+        if ($end - $start + 1 < $limit) {
+            $start = max(1, $end - $limit + 1);
+        }
 
-                                // Halaman tengah
-                                for ($i = $start; $i <= $end; $i++) {
-                                    $active = ($i == $halaman) ? 'active' : '';
-                                    echo '<li class="page-item ' . $active . '"><a class="page-link" href="?halaman=' . $i . '">' . $i . '</a></li>';
-                                }
+        for ($i = $start; $i <= $end; $i++) {
+            $active = ($i == $halaman) ? 'active' : '';
+        ?>
+            <li class="page-item <?= $active ?>">
+                <a class="page-link" href="?halaman=<?= $i ?>&<?= $filterParams ?>">
+                    <?= $i ?>
+                </a>
+            </li>
+        <?php } ?>
 
-                                // Tampilkan halaman terakhir + ellipsis
-                                if ($end < $pages) {
-                                    if ($end < $pages - 1) {
-                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
-                                    }
-                                    echo '<li class="page-item"><a class="page-link" href="?halaman=' . $pages . '">' . $pages . '</a></li>';
-                                }
+        <!-- NEXT -->
+        <?php if ($halaman < $pages) { ?>
+            <li class="page-item">
+                <a class="page-link" href="?halaman=<?= $halaman + 1 ?>&<?= $filterParams ?>">
+                    &raquo;
+                </a>
+            </li>
+        <?php } else { ?>
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+        <?php } ?>
 
-                                // Tombol Next
-                                if ($halaman < $pages) {
-                                    echo '<li class="page-item"><a class="page-link" href="?halaman=' . ($halaman + 1) . '">&raquo;</a></li>';
-                                } else {
-                                    echo '<li class="page-item disabled"><span class="page-link">&raquo;</span></li>';
-                                }
-                                ?>
-                            </ul>
-                        </div>
+    </ul>
+</div>
+<?php } ?>
+
+
 
                       </div>
                     </div>

@@ -155,6 +155,8 @@ while ($row = mysqli_fetch_assoc($query_run)) :
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="edit_part.php" method="POST">
+            <input type="hidden" name="id_part" value="<?= $row['id_part']; ?>">
+            <input type="hidden" name="halaman" value="<?= $_GET['halaman'] ?? 1 ?>">
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Part Mesin</h5>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
@@ -188,6 +190,8 @@ while ($row = mysqli_fetch_assoc($query_run)) :
         <div class="modal-content">
 
             <form action="hapus_part.php" method="GET">
+                <input type="hidden" name="id" value="<?= $row['id_part']; ?>">
+                <input type="hidden" name="halaman" value="<?= $_GET['halaman'] ?? 1 ?>">
                 <div class="modal-header">
                     <h5 class="modal-title">Konfirmasi Hapus</h5>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>

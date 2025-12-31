@@ -19,7 +19,11 @@ if ($part_result && mysqli_num_rows($part_result) > 0) {
         $parts[] = $row;
     }
 }
+$queryString = $_GET;
+unset($queryString['halaman']);
 
+$queryUrl = http_build_query($queryString);
+$queryUrl = $queryUrl ? '&' . $queryUrl : '';
 $where = [];
 
 // Filter kode mesin
@@ -199,6 +203,13 @@ while ($row = mysqli_fetch_assoc($result)) {
         <div class="modal-body">
 
           <input type="hidden" name="log_part" value="<?php echo $row['log_part']; ?>">
+          <?php
+          foreach ($_GET as $key => $value) {
+              if ($key !== 'status') {
+                  echo '<input type="hidden" name="'.$key.'" value="'.htmlspecialchars($value).'">';
+              }
+          }
+          ?>
 
           <div class="form-group">
             <label>Tanggal</label>
@@ -266,10 +277,10 @@ while ($row = mysqli_fetch_assoc($result)) {
 
                 // Tombol Prev
                 if ($halaman > 1) {
-                    echo '<li class="page-item"><a class="page-link" href="?halaman=' . ($halaman - 1) . '">&laquo;</a></li>';
-                } else {
-                    echo '<li class="page-item disabled"><span class="page-link">&laquo;</span></li>';
-                }
+    echo '<li class="page-item">
+        <a class="page-link" href="?halaman='.($halaman-1).$queryUrl.'">&laquo;</a>
+    </li>';
+}
 
                 // Halaman pertama + ellipsis
                 if ($start > 1) {
@@ -281,9 +292,11 @@ while ($row = mysqli_fetch_assoc($result)) {
 
                 // Halaman tengah
                 for ($i = $start; $i <= $end; $i++) {
-                    $active = ($i == $halaman) ? 'active' : '';
-                    echo '<li class="page-item ' . $active . '"><a class="page-link" href="?halaman=' . $i . '">' . $i . '</a></li>';
-                }
+    $active = ($i == $halaman) ? 'active' : '';
+    echo '<li class="page-item '.$active.'">
+        <a class="page-link" href="?halaman='.$i.$queryUrl.'">'.$i.'</a>
+    </li>';
+}
 
                 // Halaman terakhir + ellipsis
                 if ($end < $pages) {
@@ -295,10 +308,10 @@ while ($row = mysqli_fetch_assoc($result)) {
 
                 // Tombol Next
                 if ($halaman < $pages) {
-                    echo '<li class="page-item"><a class="page-link" href="?halaman=' . ($halaman + 1) . '">&raquo;</a></li>';
-                } else {
-                    echo '<li class="page-item disabled"><span class="page-link">&raquo;</span></li>';
-                }
+    echo '<li class="page-item">
+        <a class="page-link" href="?halaman='.($halaman+1).$queryUrl.'">&raquo;</a>
+    </li>';
+}
                 ?>
               </ul>
             </div>
