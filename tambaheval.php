@@ -33,7 +33,7 @@ include('includes/sidebar.php');
         </div>
 
         <!-- Form -->
-        <form action="code1.php" method="POST">
+        <form action="code1.php" method="POST" enctype="multipart/form-data">
           <div class="card-body">
 
             <div class="form-group">
@@ -88,6 +88,14 @@ include('includes/sidebar.php');
                 <option value="OK">OK</option>
                 <option value="NOT OK">NOT OK</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label for="foto">Upload Foto</label>
+              <input type="file" name="foto" class="form-control-file"
+                    accept="image/*">
+              <small class="text-muted">
+                Format: JPG, PNG, JPEG | Max 2MB
+              </small>
             </div>
 
           </div>

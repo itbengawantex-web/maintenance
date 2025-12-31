@@ -126,6 +126,7 @@ if (!$result) {
         <th colspan="5" style="vertical-align:middle; text-align:center;">4M + 1E Analisis Akar Masalah</th>
         <th rowspan="2" style="vertical-align:middle;">Counter Measure</th>
         <th rowspan="2" style="vertical-align:middle;">Status</th>
+        <th rowspan="2" style="vertical-align:middle;">Foto</th>
         <th rowspan="2" style="vertical-align:middle;">Aksi</th>
       </tr>
       <tr>
@@ -161,6 +162,13 @@ if (!$result) {
           <td><?= $row['environment'] ?></td>
           <td><?= $row['countermeasure'] ?></td>
           <td><?= $status_badge ?></td>
+          <td><?php if ($row['foto']) : ?>
+  <a href="uploads/fishbone/<?= $row['foto']; ?>" target="_blank">
+    <img src="uploads/fishbone/<?= $row['foto']; ?>" width="80">
+  </a>
+<?php else : ?>
+  -
+<?php endif; ?></td>
           <td>
             <!-- Tombol Edit -->
             <button type='button' class='btn btn-sm btn-success' data-toggle='modal' data-target='#editModal<?= $row['no_evaluasi'] ?>'>
@@ -220,6 +228,21 @@ if (!$result) {
                       <label>Countermeasure</label>
                       <input type='text' name='countermeasure' class='form-control' value='<?= $row['countermeasure'] ?>'>
                     </div>
+                    <div class='col-md-3 mb-2'>
+                      <label for="status">Status</label>
+                      <select name="status" class="form-control" required>
+                        <option value="<?= $row['status'] ?>"><?= $row['status'] ?></option>
+                        <option value="OK">OK</option>
+                        <option value="NOT OK">NOT OK</option>
+                      </select>
+                  </div>
+                  <div class='col-md-12 mb-2'>
+                    <label for="foto">Upload Foto</label>
+                     <input type="file" name="foto" class="form-control">
+                    <small class="text-muted">
+                      Format: JPG, PNG, JPEG | Max 2MB
+                    </small>
+                  </div>
                   </div>
                 </div>
                 <div class='modal-footer'>

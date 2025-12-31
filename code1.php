@@ -12,43 +12,72 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
        ========================================================== */
     if ($aksi == "evaluasi") {
 
-        $tanggal        = $_POST['tanggal'] ?? null;
-        $kode_mesin     = $_POST['kode_mesin'] ?? null;
-        $kerusakan      = $_POST['kerusakan'] ?? null;
-        $man            = $_POST['man'] ?? null;
-        $methode        = $_POST['methode'] ?? null;
-        $material       = $_POST['material'] ?? null;
-        $mesin          = $_POST['mesin'] ?? null;
-        $environment    = $_POST['environment'] ?? null; 
-        $countermeasure = $_POST['countermeasure'] ?? null;
-        $status         = $_POST['status'] ?? null;
+        $tanggal        = $_POST['tanggal'];
+    $kode_mesin     = $_POST['kode_mesin'];
+    $kerusakan      = $_POST['kerusakan'];
+    $man            = $_POST['man'];
+    $methode        = $_POST['methode'];
+    $material       = $_POST['material'];
+    $mesin          = $_POST['mesin'];
+    $environment    = $_POST['environment'];
+    $countermeasure= $_POST['countermeasure'];
+    $status         = $_POST['status'];
 
-        $query = "INSERT INTO evaluasi 
-            (tanggal, kode_mesin, kerusakan, man, methode, material, mesin, environment, countermeasure, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // =============================
+    // UPLOAD FOTO
+    // =============================
+    $foto = NULL;
 
-        $stmt = mysqli_prepare($con, $query);
+if (!empty($_FILES['foto']['name'])) {
 
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "ssssssssss",
-                $tanggal, $kode_mesin, $kerusakan, $man, $methode,
-                $material, $mesin, $environment, $countermeasure, $status
-            );
+    $ext = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
+    $allowed = ['jpg','jpeg','png'];
 
-            if (mysqli_stmt_execute($stmt)) {
-                $_SESSION['status'] = "Data evaluasi berhasil disimpan!";
-                $_SESSION['status_code'] = "success";
-            } else {
-                $_SESSION['status'] = "Query error evaluasi: " . mysqli_stmt_error($stmt);
-                $_SESSION['status_code'] = "error";
-            }
-
-            mysqli_stmt_close($stmt);
-        }
-
+    if (!in_array($ext, $allowed)) {
+        $_SESSION['status'] = "Format foto tidak valid!";
+        $_SESSION['status_code'] = "danger";
         header("Location: tambaheval.php");
         exit();
     }
+
+    if ($_FILES['foto']['size'] > 2 * 1024 * 1024) {
+        $_SESSION['status'] = "Ukuran foto maksimal 2MB!";
+        $_SESSION['status_code'] = "danger";
+        header("Location: tambaheval.php");
+        exit();
+    }
+
+    // 🔥 bersihkan kode mesin
+    $kode_mesin_safe = preg_replace('/[^A-Za-z0-9\-]/', '_', $kode_mesin);
+
+    // 🔥 nama file = kode_mesin_timestamp.ext
+    $foto = $kode_mesin_safe . '_' . time() . '.' . $ext;
+
+    move_uploaded_file(
+        $_FILES['foto']['tmp_name'],
+        "uploads/fishbone/" . $foto
+    );
+}
+
+    // =============================
+    // INSERT DATA
+    // =============================
+    $query = "INSERT INTO evaluasi 
+    (tanggal, kode_mesin, kerusakan, man, methode, material, mesin, environment, countermeasure, status, foto)
+    VALUES
+    ('$tanggal','$kode_mesin','$kerusakan','$man','$methode','$material','$mesin','$environment','$countermeasure','$status','$foto')";
+
+    if (mysqli_query($con, $query)) {
+        $_SESSION['status'] = "Data fishbone berhasil disimpan";
+        $_SESSION['status_code'] = "success";
+    } else {
+        $_SESSION['status'] = "Gagal menyimpan data";
+        $_SESSION['status_code'] = "danger";
+    }
+
+    header("Location: tambaheval.php");
+    exit();
+}
 
     /* ==========================================================
        MODE 2 : SIMPAN DATA KANBAN EXTRUDER
