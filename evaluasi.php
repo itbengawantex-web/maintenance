@@ -181,7 +181,7 @@ if (!$result) {
         <div class='modal fade' id='editModal<?= $row['no_evaluasi'] ?>' tabindex='-1' role='dialog' aria-labelledby='editModalLabel<?= $row['no_evaluasi'] ?>' aria-hidden='true'>
           <div class='modal-dialog modal-lg' role='document'>
             <div class='modal-content'>
-              <form action='proses_edit1.php' method='post'>
+              <form action='proses_edit1.php' method='post' enctype="multipart/form-data">
                 <div class='modal-header'>
                   <h5 class='modal-title' id='editModalLabel<?= $row['no_evaluasi'] ?>'>Edit Data Evaluasi</h5>
                   <button type='button' class='close' data-dismiss='modal' aria-label='Close'>
